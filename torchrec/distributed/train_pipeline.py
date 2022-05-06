@@ -478,9 +478,13 @@ class TrainPipelineSparseDist(TrainPipeline[In, Out]):
                     model.init_data_parallel()
 
                 # Try to pipeline input data dist.
-                self._pipelined_modules = _rewrite_model(
-                    model, self._context, self._data_dist_stream
-                )
+                self._pipelined_modules = [] 
+
+                # Uncomment it to unblock ORTModule training.
+                # Should no impact for the normal training.
+                #_rewrite_model(
+                #    model, self._context, self._data_dist_stream
+                #)
 
         with torch.cuda.stream(self._data_dist_stream):
             _wait_for_batch(batch_i, self._memcpy_stream)
