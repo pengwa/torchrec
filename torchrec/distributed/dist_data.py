@@ -7,6 +7,7 @@
 
 import itertools
 from typing import List, Optional, Callable
+import os
 
 import torch
 import torch.distributed as dist
@@ -818,13 +819,22 @@ class SequenceEmbeddingsAwaitable(Awaitable[torch.Tensor]):
         self._embedding_dim = embedding_dim
 
         if self._unbucketize_permute_tensor is not None:
-            self.callbacks.append(
-                lambda ret: torch.index_select(
-                    ret.view(-1, self._embedding_dim),
-                    0,
-                    self._unbucketize_permute_tensor,
+             if os.getenv('EMBEDDING_FP16_TO_FP32', 'false').lower() in ['true', '1', 'yes']:
+                self.callbacks.append(
+                    lambda ret: torch.index_select(
+                        ret.view(-1, self._embedding_dim),
+                        0,
+                        self._unbucketize_permute_tensor,
+                    ).to(torch.float32)
                 )
-            )
+            else:
+                self.callbacks.append(
+                    lambda ret: torch.index_select(
+                        ret.view(-1, self._embedding_dim),
+                        0,
+                        self._unbucketize_permute_tensor,
+                    )
+                )
 
     def _wait_impl(self) -> torch.Tensor:
         """
